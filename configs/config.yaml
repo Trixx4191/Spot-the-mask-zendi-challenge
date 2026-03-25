@@ -1,0 +1,65 @@
+project:
+  name: spot_the_mask
+  seed: 42
+  competition: zindi-spot-the-mask
+
+paths:
+  data_dir: data/raw
+  processed_dir: data/processed
+  train_csv: data/raw/train_labels.csv
+  sample_sub: data/raw/sample_submission.csv
+  images_dir: data/raw/images
+  model_dir: outputs/models
+  submission_dir: outputs/submissions
+  log_dir: outputs/logs
+
+data:
+  image_size: 224        # safer for CPU — less RAM per batch
+  val_split: 0.2
+  n_folds: 5
+  num_workers: 2         # 2 workers — stable, avoids fork memory spikes
+
+augmentation:
+  train:
+    resize: 224
+  val:
+    resize: 224
+  tta_steps: 4
+
+models:
+  - name: efficientnet_b2
+    pretrained: true
+    image_size: 224
+    dropout: 0.35
+
+  - name: efficientnet_b4
+    pretrained: true
+    image_size: 224
+    dropout: 0.4
+
+training:
+  epochs: 40
+  batch_size: 8          # smaller = less RAM per forward pass
+  accumulation_steps: 4  # effective batch = 32, same quality
+  optimizer: adamw
+  base_lr: 1.0e-4
+  weight_decay: 1.0e-2
+  scheduler: cosine
+  warmup_epochs: 2
+  loss: bce_logits
+  label_smoothing: 0.05
+  mixed_precision: false
+  early_stopping_patience: 8
+  monitor_metric: val_auc
+
+inference:
+  tta: true
+  tta_steps: 4
+  ensemble_weights:
+    efficientnet_b2: 0.5515
+    efficientnet_b4: 0.4485
+
+pseudo_labeling:
+  enabled: true
+  confidence_threshold: 0.95
+  rounds: 2
